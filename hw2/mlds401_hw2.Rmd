@@ -1,0 +1,75 @@
+---
+title: "mlds401_hw2"
+output: html_document
+date: "2024-10-06"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r p1q1}
+library(readr)
+setwd("/Users/homura/Desktop/MLDS401/hw2")
+
+auto <- read.table("auto.txt", sep = "", header = T)
+remove <- which(is.na(auto),arr.ind = T)[,1]
+auto <- auto[-remove,]
+auto$origin <- factor((auto$origin), labels = c("US", "Europe", "Japan"))
+
+table(auto$origin)
+```
+
+```{r p1q2}
+model1 <- lm(mpg ~ origin + weight + year, data = auto)
+
+summary(model1)
+
+# Diagnostic plots
+par(mfrow=c(2,2))
+plot(model1)
+
+```
+
+b) The key assumptions violated are non-linearity, heteroscedasticity, and some deviations from normality. The "Residuals vs Fitted" plot reveals a slight fitted curve, suggesting potential non-linearity, and the Q-Q plot indicates some deviation from normality in the right tail. Additionally, the "Scale-Location" plot suggests heteroscedasticity, with an increasing spread of residuals for larger fitted values. There are a few points of concern regarding high leverage in the "Residuals vs Leverage" plot, though no extreme outliers.
+
+```{r p1q3}
+auto$log_mpg <- log(auto$mpg)
+auto$log_weight <- log(auto$weight)
+auto$year_squared <- auto$year^2
+
+model2 <- lm(log_mpg ~ origin + log_weight + year + year_squared, data = auto)
+
+summary(model2)
+
+# Diagnostic plots
+par(mfrow=c(2,2))
+plot(model2)
+
+```
+
+c) The model assumptions are roughly satisified. The "Residuals vs Fitted" plot shows more evenly scattered residuals, suggesting an improved linear fit. The Q-Q plot exhibits less deviation from normality, and the "Scale-Location" plot suggests a more constant variance, indicating reduced heteroscedasticity. There are still some influential points in the "Residuals vs Leverage" plot, but overall, problem (c) improve model assumptions like linearity, normality, and homoscedasticity compared to problem (b). From table summary, we can also see that the regression results in problem (c) demonstrate a better model fit compared to problem (b), with a higher adjusted R-squared (0.888 vs 0.819) and a significantly lower residual standard error (0.1142 vs 3.337), indicating more accurate predictions. 
+
+
+```{r p1q4}
+# Define a range for the year variable
+year_range <- seq(min(auto$year), max(auto$year))
+
+# Calculate log(mpg) based on the regression model
+log_mpg_pred <- 18.5012369 - 0.2569025 * year_range + 0.0019113 * year_range^2
+
+# Plot the relationship
+plot(year_range, log_mpg_pred, type = "l", col = "blue", lwd = 2, 
+     xlab = "Year", ylab = "Predicted log(mpg)",
+     main = "Effect of Year on log(mpg)")
+
+# Calculate the minimum point
+min_year <- 0.2569025 / (2 * 0.0019113)
+min_year
+
+```
+
+d) Based on the plot, it is U-shaped curve, where the minimum point represents the year at which log(mpg) is lowest. The minimum point for year, where log(mpg) is lowest, occurs around 67.21, which is around 1967.
+
+e) The coefficient of -0.8746164 for log(weight) means a 1% increase in weight corresponds to a 0.8746164% decrease in mpg. In contrast, the coefficient of -5.887e-03 for weight(unlogged) means that for each unit increase in weight, mpg decreases by 5.887e-03 units. 
