@@ -1,0 +1,263 @@
+---
+title: "Hw3"
+author: "Hongkai Lou"
+date: "`r Sys.Date()`"
+output: pdf_document
+
+---
+
+```{r}
+
+
+library(car)  
+library(psych) 
+auto <- read.table('auto.txt', header = T)
+lm1 <- lm(log(mpg) ~ cylinders+log(displacement) + log(weight) + year, data = auto)
+summary(lm1)
+```
+1(a): The fraction of variance explained by the predictors is 0.8842, meaning 88.42% of the variance in log(mpg) is explained by the predictors. The remaining 11.58% of the variance is unexplained by this model. log(weight) and year are the most significant variables.
+
+1(b): 
+```{r}
+vif(lm1)
+```
+We have very severe muitlicollinearity in this model, especially around variables log(displacement), and substantial multicollinearity log(weight), and cylinder. These variables might be closely related and we need to address this issue.
+
+1(c):
+```{r}
+lm2 <- lm(log(mpg) ~ cylinders+log(displacement)  + year, data = auto)
+summary(lm2)
+```
+We see that the coefficient of cylinders increases by 0.005, which is about 50 percent of the original estimate. However, log(displacement)'s estimate coefficient decreases about 9.4 times. The difference in the estimated coefficient compared to previous model is so dramatic, indicating a very strong correlation between log(displacement and) from the theorem Omitted variable bias.
+
+
+```{r}
+n = 500
+w <- runif(n, 0, 5)
+epislon <- rnorm(n,0,1)
+error <- rnorm(n,0,1)
+x = w+epislon
+y = 4+2*x-3*w+error
+```
+2(a): This case is fork. In fork case, we need to include control to block back-door path. So if w -> y and w ->x->y, we need to include w in our case to study x->y. 
+
+2(b) and 2(c)
+```{r}
+
+dataset2 <- data.frame(y, x, w)
+round(cor(auto[,1:8]), 3)
+pairs.panels(dataset2, ellipses=F, stars=T)
+summary(dataset2)
+for(i in 1:3){
+  print(sd(dataset2[, i]))
+}
+lm3 <- lm(y~x, data = dataset2)
+summary(lm3)
+```
+The coefficient of x is 0.08163, with a t-statistics of 1.286 and p-value of 0.199. If we do a hypothesis test with $H_0: B_1 = 0$ and $H_1: B_1 \neq 0$, since 0.199 > 0.05, we fail to reject the null hypothesis, meaning that the coefficient of x is not significant at the 0.05 level. The 95% confidence interval is
+```{r}
+c(0.08163 - qt(0.975, 497)*0.06347, 0.08163 + qt(0.975, 497)*0.06347 )
+```
+Which did not cover the true slope for x.
+
+2(d):
+```{r}
+lm4 <- lm(y ~ x+w, data = dataset2)
+summary(lm4)
+```
+The coefficient of x is 2.07140, with a t-statistics of 46.29 and p-value less than 2e-16. If we do a hypothesis test with $H_0: B_1 = 0$ and $H_1: B_1 \neq 0$, since 2e-16 < 0.05, we reject the null hypothesis, meaning that the coefficient of x is significant at the 0.05 level. The 95% confidence interval is
+```{r}
+c(2.07140 - qt(0.975, 497)*0.04475, 2.07140 + qt(0.975, 497)*0.04475 )
+```
+Which cover the true slope for x, which is 2.
+
+2(e): The VIF score is moderate in this case
+```{r}
+vif(lm4)
+```
+
+3(a): This is a collider case
+
+3(b):
+```{r}
+set.seed(005536893)
+x <- runif(n,0,5)
+y <- x+rnorm(n,0,1)
+w <- 2*x+3*y+4+rnorm(n,0,1)
+dataset3 <- data.frame(x,y,w)
+round(cor(dataset3), 3)
+summary(dataset3)
+for(i in 1:3){
+  print(sd(dataset3[, i]))
+}
+
+```
+3(c):
+```{r}
+lmcollider1 <- lm(y~x, data = dataset3)
+summary(lmcollider1)
+```
+The coefficient of x is 1.021506, with a t-statistics of 35.609 and p-value less than 2e-16. If we do a hypothesis test with $H_0: B_1 = 0$ and $H_1: B_1 \neq 0$, since 2e-16 < 0.05, we reject the null hypothesis, meaning that the coefficient of x is significant at the 0.05 level. The 95% confidence interval is
+```{r}
+c(1.021506 - qt(0.975, 497)*0.028687, 1.021506 + qt(0.975, 497)*0.028687 )
+```
+Which covers the true coefficient of $B_1=1$
+
+3(d):
+```{r}
+lmcollider2 <- lm(y~x+w, data = dataset3)
+summary(lmcollider2)
+```
+The coefficient of x is -0.529567, with a t-statistics of -20.31 and p-value less than 2e-16. If we do a hypothesis test with $H_0: B_1 = 0$ and $H_1: B_1 \neq 0$, since 2e-16 < 0.05, we reject the null hypothesis, meaning that the coefficient of x is significant at the 0.05 level. The 95% confidence interval is
+```{r}
+c(-0.529567 - qt(0.975, 497)*0.026199, -0.529567 + qt(0.975, 497)*0.026199 )
+```
+Which unsurprisingly, does not actually covers the true coefficient of $B_1=1$. It captures the wrong one.
+
+3(e): Although the VIF is still less than 10, it does imply substantial multicollinearity.
+```{r}
+vif(lmcollider2)
+```
+
+3(f): The R squared value may indicate the second model is better than the first model, with an adjusted r-squared of 0.969 compared to 0.7174. However, this is not the right model, as the true relationship between x and y is not captured, where we end up getting a wrong estimate of coefficient of x with relation to y.
+
+
+4(a): This is a pipe. case
+
+4(b):
+```{r}
+set.seed(005536893)
+x <- runif(n,0,5)
+w <- x+rnorm(n,0,1)
+y <- 2*w+rnorm(n,0,1)
+dataset4 <- data.frame(x,y,w)
+round(cor(dataset4), 3)
+summary(dataset4)
+for(i in 1:3){
+  print(sd(dataset4[, i]))
+}
+
+```
+4(c):
+```{r}
+lmpipe1 <- lm(y~x, data = dataset4)
+summary(lmpipe1)
+```
+The coefficient of x is 2.05895, with a t-statistics of 33.04 and p-value less than 2e-16. If we do a hypothesis test with $H_0: B_1 = 0$ and $H_1: B_1 \neq 0$, since 2e-16 < 0.05, we reject the null hypothesis, meaning that the coefficient of x is significant at the 0.05 level.
+
+4(d):
+```{r}
+lmpipe2 <- lm(y~x+w, data = dataset4)
+summary(lmpipe2)
+```
+The coefficient of x is 0.10136, with a t-statistics of 1.832 and p-value is equal to 0.0676. If we do a hypothesis test with $H_0: B_1 = 0$ and $H_1: B_1 \neq 0$, since 0.0676 > 0.05, we reject the null hypothesis, meaning that the coefficient of x is significant at the 0.05 level.
+
+4(e): The adjusted R-squared value is higher for the second model, which is 0.9302 compared to 0.6861 from the first model.
+
+
+5(a)
+```{r}
+set.seed(1)
+x1 = runif(500,0,4) # part a
+x2 = 0.5*x1 + rnorm(100)/10
+y = 2 + 2*x1 + 0.3*x2 + rnorm(100)
+```
+The linear model has the form $y = B_1*x_1 + B_2*x_2 + \epsilon, with \epsilon ~ N(0,1). B_1 = 2 and B_2 = 0.3$
+
+5(b): The correlation between x1 and x2 is 0.8351212
+5(c)
+```{r}
+cor(x1, x2)
+lm5 <- lm(y~x1)
+summary(lm5)
+```
+The coefficient of $x_1$ is 1.4396, with a t-statistics of 1.996 and p-value is equal to 0.0487. If we do a hypothesis test with $H_0: B_1 = 0$ and $H_1: B_1 \neq 0$, since 0.0487 < 0.05, we reject the null hypothesis, meaning that the coefficient of x is significant at the 0.05 level. The coefficient of $x_2$ is 1.0097, with a t-statistics of 0.891 and p-value is equal to 0.3754. If we do a hypothesis test with $H_0: B_2 = 0$ and $H_1: B_2 \neq 0$, since 0.3754 > 0.05, we fail reject the null hypothesis, meaning that the coefficient of x is not significant at the 0.05 level. The true coefficients are both covered for $x_1$ and $x_2$ in the CI at 95 confidence level, since the standard error is very big.
+
+5(d):
+```{r}
+lm6 <- lm(y~x1)
+summary(lm6)
+```
+The coefficient of $x_1$ in this model is 1.9759, with a t-statistics of 4.986 and p-value is equal to 2.66e-06. If we do a hypothesis test with $H_0: B_1 = 0$ and $H_1: B_1 \neq 0$, since 2.66e-06 < 0.05, we reject the null hypothesis, meaning that the coefficient of x is significant at the 0.05 level. The estimate of coefficient is very close to 2, and with relatively large standard error, the true coefficient is included in the 95% CI.
+
+5(e):
+```{r}
+lm7 <- lm(y~x2)
+summary(lm7)
+```
+The coefficient of $x_2$ in this model is 2.8996, with a t-statistics of 4.58 and p-value is equal to 1.37e-05. If we do a hypothesis test with $H_0: B_1 = 0$ and $H_1: B_1 \neq 0$, since 1.37e-05 < 0.05, we reject the null hypothesis, meaning that the coefficient of x is significant at the 0.05 level. The estimate of coefficient is very close to 3, whereas our true coefficient is 0.3 for x2. If we calculate the confidence interval:
+```{r}
+confint(lm7)
+```
+We see that the true interval of $x_2$ is not covered in the confidence interval.
+
+5(f): Not really. $x_2$ is a variable created by $x_1$ for relatively small values. When regressing y and both x1 and x2, variance can be explained from both variables. When we only regress y on x1, we would expect the estimate of coefficient to increase, account for the missing predictor variable x2. However, when we regress on x2, x2 will try to account for the unexplained variance from x1, since it is x1 -> x2. Thus, the coefficient of estimate will be far away from the true coefficient.
+
+8: We would expect that as the amount of the crime goes up, the demand for the bikes will go down, because people will feel more dangerous when using or renting a bike. The type of crime would also affect the demand, as different types of crime will bring different kinds of danger. We would expect that for crimes happened more on streets and may bring more danger to citizens will have more negative impact, such as battery, assault, robbery, and homicide. On the other hand, criminals that involve home intrude or economic behavior, such as deceptive practice, criminal trespassing, theft, burglary will have less impact on demand of bikes. Further results will require investigations.
+```{r}
+bike <- read.csv('bike.csv')
+bike <- bike[, -c(1, 46)]
+bike$assault_battery <- bike$ASSAULT+bike$BATTERY
+lm_bike <- lm(trips ~ ASSAULT+ROBBERY+BURGLARY+THEFT+CRIMINAL_TRESPASS+NARCOTICS+HOMICIDE+BATTERY+DECEPTIVE_PRACTICE, data = bike)
+summary(lm_bike)
+vif(lm_bike)
+```
+The VIF of this model is relatively high. We remove the highly correlated variables in the next one.
+```{r}
+lm_bike_2 <- lm(trips ~ ASSAULT+ROBBERY+BURGLARY+THEFT+CRIMINAL_TRESPASS+NARCOTICS+HOMICIDE+STALKING, data = bike)
+summary(lm_bike_2)
+vif(lm_bike_2)
+```
+We try to add other kinds of crime to observe the p-value in the next model.
+```{r}
+lm_bike_3 <- lm(trips ~ ASSAULT+ROBBERY+BURGLARY+THEFT+CRIMINAL_TRESPASS+NARCOTICS+HOMICIDE+STALKING+WEAPONS_VIOLATION+CRIM_SEXUAL_ASSAULT, data = bike)
+summary(lm_bike_3)
+vif(lm_bike_3)
+```
+We want to observe the effect of none crime variables.
+```{r}
+lm_bike_4 <- lm(trips ~ ASSAULT+ROBBERY+BURGLARY+THEFT+CRIMINAL_TRESPASS+NARCOTICS+HOMICIDE+STALKING+WEAPONS_VIOLATION+EDU, data = bike)
+summary(lm_bike_4)
+vif(lm_bike_4)
+```
+There are some other predictor variables that will increase $r^2$ values but the cost is it will highly impact the p-value and estimate of other important variables (crime variables) that we wish to study and conduct hypothesis test on. Thus, we will not include them in the model. An example of including Capacity in the linear regression is included below.
+```{r}
+lm_bike_5 <- lm(trips ~ ASSAULT+ROBBERY+BURGLARY+THEFT+CRIMINAL_TRESPASS+NARCOTICS+HOMICIDE+STALKING+WEAPONS_VIOLATION+EDU+CAPACITY, data = bike)
+summary(lm_bike_5)
+vif(lm_bike_5)
+```
+
+We've seen most of the different models where we find possible high correlations between crimes, how some crime types might be confounding variable, and which other variables might affect $r^2$ value. However, since our goal is to learn the effect of crime on demand, we will include highly correlated variables back to the model. We will also remove EDU, since it might negatively impact the importance of other crime variables.
+```{r}
+lm_bike_4 <- lm(trips ~ ASSAULT+ROBBERY+BURGLARY+THEFT+CRIMINAL_TRESPASS+NARCOTICS+HOMICIDE+STALKING+BATTERY+DECEPTIVE_PRACTICE, data = bike)
+summary(lm_bike_4)
+```
+We first estimate our regression model. 
+
+$\large Hypothesis$
+Null Hypothesis $H_0$: The crime variable has no effect on demand ($B_i$ = 0)
+Alternative Hypothesis $H_1$: The crime variable has an effect on demand ($B_i \neq$ 0)
+
+From the Regression output and p-value, we can draw the following conclusion: Assault, Robbery, Burglary, Theft, Stalking, and Deceptive_Practice are signicant variables with p value < 0.05. Specficially, Assault, Bulglary, and Theft has p-value < 0.01. Battery will pass the hypothesis test at a significance level at the 0.1 level, meaning they have certain effect. Criminal Trespass, Narcotics, Homicide are not signicant variables.
+
+From this hypothesis test, we can first notice that Drug and Weapon related crimes (Homicide) are not related to demand of the bikes. Both Burglary and Criminal Trespass involve unauthorized entry, but Burglary involves intent to commit a crime, while criminal trespass occurs when a person has no intent to commit a crime inside. There are two common points between these three kinds of crime: They are more likely to happen in private place, and they are not property crimes or impact. Although Burglary happens more likely in private place, but they will likely to involve property crime and has the intent to commit it. Violent crimes that are likely to happen in public place such as Assault, Robbery, Stalking, and Battery will negatively impact demand, as people rent bikes will use them in public area and feel dangerous by these violent crimes. Property Crimes that are likely to happen with the criminals have the intention to commit crime will also likely to negatively impact demand, as renters will feel their property unsecure. Thus, we can develop the following theorem:
+
+$\huge Theorem$:
+Violent crimes that occur in public spaces or involve criminal intent towards property will negatively impact bike rental demand, while crimes that occur in private spaces without intent to harm property will have minimal influence on demand.
+
+Violent public crimes (Assault, Robbery, Battery, Stalking) reduce demand by creating perceptions of public danger.
+
+All property crimes with criminal intent (Theft, Burglary) reduce demand by creating concerns about security and loss.
+
+Other Private crimes or context-specific crimes (e.g., Homicide, Narcotics, Criminal Trespass) have little or no effect on demand, as they do not directly affect the public areas where bike rentals operate.
+
+
+$\huge Actual\space Crime \space Statistics \space vs  \space Perceptions \space of \space Crime$
+Actual crime data from the Chicago Police Department measures real events, which are objective but may not reflect public perceptions or fears.
+
+Perception-based fears might have a larger impact on demand than actual statistics. For example:
+If there’s widespread media coverage of a single assault event in a bike-friendly area, it could have a larger impact on rentals than if statistics show that such events are rare.
+
+In contrast, if narcotics offenses or homicide occur far from public bike routes, they might show no effect on rental demand despite their prevalence in crime data.
+
+
