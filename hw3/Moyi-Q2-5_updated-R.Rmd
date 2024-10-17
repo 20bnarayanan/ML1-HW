@@ -1,0 +1,303 @@
+---
+title: "401-hw3"
+output: html_document
+date: "2024-10-14"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r p1q1}
+library(readr)
+library(car)
+library(carData)
+```
+
+## Problem 2
+
+a) Here, \( y \) depends on both \( x \) and \( w \), and \( x \) depends on \( w \). This configuration represents a **fork** because \( w \) affects both \( x \) and \( y \).
+
+```{r p1q2}
+# Set seed for reproducibility
+set.seed(123)
+
+# Generate the data
+n <- 500
+w <- runif(n, min = 0, max = 5)
+delta <- rnorm(n, mean = 0, sd = 1)
+x <- w + delta
+epsilon <- rnorm(n, mean = 0, sd = 1)
+y <- 4 + 2 * x - 3 * w + epsilon
+
+# Correlation matrix
+data <- data.frame(x = x, w = w, y = y)
+cor_matrix <- cor(data)
+
+# Basic descriptive statistics
+summary_stats <- summary(data)
+
+list(correlation_matrix = cor_matrix, summary_statistics = summary_stats)
+
+```
+
+
+```{r p1q3}
+# Linear regression of y on x
+model1 <- lm(y ~ x, data = data)
+
+# Summary of the model to check coefficients
+summary(model1)
+
+# Extracting 95% confidence interval for the coefficient of x
+confint(model1, "x", level = 0.95)
+
+```
+
+c) The large p-value of 0.988 means we fail to reject the null hypothesis that the coefficient of x is 0, which suggests that the coefficient of x is not statistically significant at the 0.05 significance level. The 95% CI (-0.1339717, 0.1320145) does not cover the true slope of 2 for x.
+
+
+```{r p1q4}
+
+# Linear regression of y on x and w
+model2 <- lm(y ~ x + w, data = data)
+
+# Summary of the model to check coefficients
+summary(model2)
+
+# 95% confidence interval for the coefficient of x in the second model
+confint(model2, "x", level = 0.95)
+
+```
+
+d) The small p-value that is < 2.2e-16 means we can reject the null hypothesis that the coefficient of x is 0, which suggests that the coefficient of x is significant at the 0.05 significance level. The 95% CI (1.900471, 2.078544) cover the true slope of 2 for x.
+
+
+```{r p1q5}
+# Calculate VIF
+vif_values <- vif(model2)
+vif_values
+
+```
+
+e) The VIF for x is 3.036348 and the VIF for w is also 3.036348.
+
+
+## Problem 3
+
+a) In this case, \( w \) depends on \( y \), which depends on \( x \). This is a **collider** structure since \( y \) is an effect of both \( x \) and \( w \).
+
+```{r p2q1}
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Generate the data
+n <- 500
+x <- runif(n, min = 0, max = 5)
+delta <- rnorm(n, mean = 0, sd = 1)
+y <- x + delta
+epsilon <- rnorm(n, mean = 0, sd = 1)
+w <- 4 + 2 * x + 3 * y + epsilon
+
+# Correlation matrix
+data <- data.frame(x = x, y = y, w = w)
+cor_matrix <- cor(data)
+
+# Basic descriptive statistics
+summary_stats <- summary(data)
+
+list(correlation_matrix = cor_matrix, summary_statistics = summary_stats)
+
+
+```
+
+
+```{r p2q2}
+
+# Linear regression of y on x
+model1 <- lm(y ~ x, data = data)
+
+# Summary of the model to check coefficients
+summary(model1)
+
+# Extracting 95% confidence interval for the coefficient of x
+confint(model1, "x", level = 0.95)
+
+```
+
+c) The small p-value that is < 2.2e-16 means we can reject the null hypothesis that the coefficient of x is 0, which suggests that the coefficient of x is significant at the 0.05 significance level. The 95% CI (0.9465387, 1.071016) cover the true slope of 1 for x.
+
+
+```{r p2q3}
+
+# Linear regression of y on x and w
+model2 <- lm(y ~ x + w, data = data)
+
+# Summary of the model to check coefficients
+summary(model2)
+
+# 95% confidence interval for the coefficient of x in the second model
+confint(model2, "x", level = 0.95)
+
+```
+
+
+d) The small p-value that is < 2.2e-16 means we can reject the null hypothesis that the coefficient of x is 0, which suggests that the coefficient of x is significant at the 0.05 significance level. The 95% CI (-0.547967, -0.4497033) does not cover the true slope of 1 for x.
+
+
+```{r p2q4}
+
+# Calculate VIF
+vif_values <- vif(model2)
+vif_values
+
+```
+
+e) The VIF for x is 6.067631 and the VIF for w is also 6.067631.
+
+
+```{r p2q5}
+
+# R-squared and residual standard error for both models
+r_squared_model1 <- summary(model1)$r.squared
+se_model1 <- summary(model1)$sigma
+
+r_squared_model2 <- summary(model2)$r.squared
+se_model2 <- summary(model2)$sigma
+
+list(
+  model1 = list(R_squared = r_squared_model1, Residual_SE = se_model1),
+  model2 = list(R_squared = r_squared_model2, Residual_SE = se_model2)
+)
+
+```
+f) Model 2 is the better model as it explains more of the variability in y and has lower prediction error on average. Since the VIF values from Model 2 are around 3.04 for both predictors, multicollinearity is present but moderate. This suggests some dependence between predictors, which could affect coefficient stability and interpretability, although it isn’t excessively high.
+
+
+## Problem 4
+
+a) In this case, \( w \) is influenced by \( x \), and \( y \) depends on \( w \). This configuration resembles a **pipe**, where the relationship flows from \( x \) to \( w \) and then to \( y \).
+
+
+```{r p3q2}
+# Set seed for reproducibility
+set.seed(123)
+
+# Generate the data
+n <- 500
+x <- runif(n, min = 0, max = 5)
+delta <- rnorm(n, mean = 0, sd = 1)
+w <- x + delta
+epsilon <- rnorm(n, mean = 0, sd = 1)
+y <- 2 * w + epsilon
+
+# Correlation matrix
+data <- data.frame(x = x, w = w, y = y)
+cor_matrix <- cor(data)
+
+# Basic descriptive statistics
+summary_stats <- summary(data)
+
+list(correlation_matrix = cor_matrix, summary_statistics = summary_stats)
+
+
+```
+
+
+```{r p3q3}
+
+# Linear regression of y on x
+model1 <- lm(y ~ x, data = data)
+
+# Summary of the model to check coefficients
+summary(model1)
+
+# Extracting 95% confidence interval for the coefficient of x
+confint(model1, "x", level = 0.95)
+
+```
+
+c) The small p-value that is < 2.2e-16 means we can reject the null hypothesis that the coefficient of x is 0, which suggests that the coefficient of x is significant at the 0.05 significance level.
+
+
+```{r p3q4}
+
+# Linear regression of y on x and w
+model2 <- lm(y ~ x + w, data = data)
+
+# Summary of the model to check coefficients
+summary(model2)
+
+```
+
+d) The large p-value of 0.915 means we cannot reject the null hypothesis that the coefficient of x is 0, which suggests that the coefficient of x is not significant at the 0.05 significance level.
+
+e) The R squared of the first model is 0.6196, and the R squared of the second model is 0.922. Therefore, Model 2 is the better model as it explains more of the variability in y on average.
+
+
+
+### Problem 5
+
+a) 
+
+$y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \epsilon$, where the true regression coefficients are $\beta_0 = 2$, $\beta_1 = 2$, $\beta_2 = 0.3$, and the standard deviation of errors is 1 since $\epsilon \sim N(0, 1)$.
+
+```{r p5q2}
+set.seed(1)
+x1 <- runif(100) # part a
+x2 <- 0.5*x1 + rnorm(100)/10
+y <- 2 + 2*x1 + .3*x2 + rnorm(100)
+
+cor(x1,x2)
+```
+
+b) The correlation between x1 and x2 is 0.8351212.
+
+```{r p5q3}
+model <- lm(y ~ x1 + x2)
+summary(model)
+
+confint(model)
+
+```
+
+c) 
+
+The estimated intercept \( 2.1305 \) is very close to the true intercept of \( 2 \). The estimated coefficient for \( x_1 \) is \( 1.4396 \), which is lower than the true value of \( 2 \). The estimated coefficient for \( x_2 \) is \( 1.0097 \), which is higher than the true value of \( 0.3 \). The regression provides parameter estimates that are in the same general direction as the true parameters, but with discrepancies due to statistical noise and potential multicollinearity.
+
+The coefficient of \( x_1 \) is 1.4396, with a t-statistics of 1.996 and p-value is equal to 0.0487. If we do a hypothesis test with \( H_0 : B_1 = 0 \) and \( H_1 : B_1 \neq 0 \), since 0.0487 < 0.05, we reject the null hypothesis, meaning that the coefficient of \( x \) is significant at the 0.05 level. The coefficient of \( x_2 \) is 1.0097, with a t-statistics of 0.891 and p-value is equal to 0.3754. If we do a hypothesis test with \( H_0 : B_2 = 0 \) and \( H_1 : B_2 \neq 0 \), since 0.3754 > 0.05, we fail reject the null hypothesis, meaning that the coefficient of \( x \) is not significant at the 0.05 level. Therefore, x1 is significantly different from 0.
+
+Based on the data, the true coefficients are both covered for \( x_1 \) and \( x_2 \) in the CI at 95 confidence level.
+
+```{r p5q4}
+modeld <- lm(y ~ x1)
+summary(modeld)
+
+confint(modeld)
+
+```
+
+d)
+
+The coefficient of \( x_1 \) in this model is 1.9759, with a t-statistics of 4.986 and p-value is equal to 2.66e-06. If we do a hypothesis test with \( H_0 : B_1 = 0 \) and \( H_1 : B_1 \neq 0 \), since 2.66e-06 < 0.05, we reject the null hypothesis, meaning that the coefficient of \( x \) is significant at the 0.05 level. The estimate of coefficient is very close to 2, and with relatively large standard error. 
+
+Therefore, $\beta_1$ is significantly different from 0. The true $\beta_1$is included in the 95% CI.
+
+
+```{r p5q5}
+modeld <- lm(y ~ x2)
+summary(modeld)
+
+confint(modeld)
+
+```
+
+e) 
+
+The coefficient of \( x_2 \) in this model is 2.8996, with a t-statistics of 4.58 and p-value is equal to 1.37e-05. If we do a hypothesis test with \( H_0 : B_1 = 0 \) and \( H_1 : B_1 \neq 0 \), since 1.37e-05 < 0.05, we reject the null hypothesis, meaning that the coefficient of \( x \) is significant at the 0.05 level. The estimate of coefficient is very close to 3, whereas our true coefficient is 0.3 for \( x_2 \). 
+
+Therefore, $\beta_2$ is significantly different from 0. From data, we saw that both the true $\beta_2$ and intercept parameter are not included in the 95% CI.
+
+
