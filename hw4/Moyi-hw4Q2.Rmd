@@ -1,0 +1,75 @@
+---
+title: "hw4"
+output: html_document
+date: "2024-10-19"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+       
+```{r p2_loadin}
+dat = data.frame(type=c(rep("A",9), rep("B",9), rep("C",9)),
+     temp=rep(c(100,125,150), 9),
+     y=c(580,1090,1392,568,1087,1380,570,1085,1386,550,1070,1328,530,1035,1312,
+       579,1000,1299,546,1045,867,575,1053,904,599,1066,889))
+```
+
+```{r p2a}
+# Interaction plot of type and temperature
+interaction.plot(dat$temp, dat$type, dat$y, 
+                 xlab = "Temperature", 
+                 ylab = "Light Output", 
+                 legend = TRUE, 
+                 col = c("red", "green", "blue"))
+
+```
+
+
+```{r p2b}
+# Fit a linear model with main effects and interaction term
+model <- lm(y ~ type * factor(temp), data = dat)
+
+# Summary of the model
+summary(model)
+```
+
+c) 
+
+H0: $\beta_1 = \beta_2 = \beta_3 = \beta_4 = \beta_5 = \beta_6 = \beta_7 = \beta_8 = 0$;
+
+H1: at least one $\beta_j \neq 0$, for j = 1, 2, 3, 4, 5, 6, 7, 8
+
+The overall model is significant. From summary data, we find p value is < 2.2e-16, which is less than 0.05. Therefore, our decision is to reject H0.
+
+```{r p2d}
+drop1(model, test='F')
+```
+
+d)
+
+H0: $\beta_5 = \beta_6 = \beta_7 = \beta_8 = 0$;
+
+H1: at least one $\beta_j \neq 0$, for j = 5, 6, 7, 8
+
+The interaction is significant. From drop1, we find p = 1.254e-14 < 0.05, so our decision is to reject H0 and conclude that there is an interaction.
+
+e) 
+
+The results indicate that both the main effects of temperature and glass type, as well as their interaction, significantly affect light output. Type A glass shows the most consistent and favorable performance, exhibiting steady increases in light output as temperature rises from 100°C to 150°C, reaching the highest output levels among all types. Type C glass behaves markedly differently from the others - while it initially follows the upward trend until 125°C, it shows a dramatic decrease in light output at 150°C (as evidenced by the significant -500 unit interaction effect), suggesting that Type C glass may be unsuitable for high-temperature operations. Based on these findings, Type A glass appears to be the optimal choice for oscilloscope tubes, particularly when operating at higher temperatures.
+
+```{r p2f}
+# Fit a model treating temp as numeric
+model_numeric <- lm(y ~ type * temp, data = dat)
+
+# Summary of the new model
+summary(model_numeric)
+```
+
+f) 
+
+It's not appropriate to treat temperature as a numerical variable. Normally, we used factor for variables that should be treated as categorical variables. From observing the dataframe, the temperature variable belongs to categorical variable instead of numeric(continuous) variable, since it only has 3 levels of 100, 125, 150.  Additionally, since the model's RSE are much larger (RSE = 111.6 vs 19.12) and the adjusted R-squared are lower (0.8661 vs 0.9961), we should treat temperature as a factor instead of a numerical variable.
+
+
+
+
