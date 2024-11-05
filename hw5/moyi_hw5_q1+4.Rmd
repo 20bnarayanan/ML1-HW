@@ -1,0 +1,187 @@
+---
+title: "401-hw5"
+output: html_document
+date: "2024-11-04"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+### Problem 1a
+
+```{r p1a}
+dat <- data.frame(
+     x1=c(2.23,2.57,2.87,3.1,3.39,2.83,3.02,2.14,3.04,3.26,3.39,2.35,
+       2.76,3.9,3.15),
+     x2=c(9.66,8.94,4.4,6.64,4.91,8.52,8.04,9.05,7.71,5.11,5.05,8.51,
+       6.59,4.9,6.96),
+     y=c(12.37,12.66,12,11.93,11.06,13.03,13.13,11.44,12.86,10.84,
+       11.2,11.56,10.83,12.63,12.46))
+
+# Generate scatterplot matrix
+pairs(dat, main = "Scatterplot Matrix for Variables x1, x2, and y")
+
+```
+
+__Comments:__
+There appears to be a negative correlation between x1 and x2, with x1 ranging from approximately 2.5 to 3.5 and x2 spanning from about 5 to 9, while y extends from around 11.0 to 13.0. The relationships between the dependent variable y and the predictors show moderate to weak correlations, and neither relationship appears strongly linear. The data points are relatively evenly distributed within their ranges without any obvious outliers or clustering, suggesting that while linear modeling might be appropriate, it may not capture all the complexity in these relationships.
+
+
+### Problem 1b
+
+```{r p1b}
+# Linear regression of y on x1
+model_x1 <- lm(y ~ x1, data = dat)
+summary(model_x1)
+
+# Residual diagnostics
+par(mfrow = c(2, 2))
+plot(model_x1)
+```
+
+
+- **Null Hypothesis (\( H_0 \))**: The coefficient of \( x_1 \) is zero (\( \beta_1 = 0 \)), meaning \( x_1 \) has no effect on \( y \).
+- **Alternative Hypothesis (\( H_a \))**: The coefficient of \( x_1 \) is not zero (\( \beta_1 \neq 0 \)), meaning \( x_1 \) has a significant effect on \( y \).
+
+Based on the regression results, the p-value for \( x_1 \) (0.995) is far greater than the significance level of 0.05. Therefore, we fail to reject the null hypothesis (\( H_0 \)). This implies that there is insufficient evidence to conclude that \( x_1 \) has a significant effect on \( y \). The overall model is also not significant, with an F-statistic p-value of 0.9945, further indicating that \( x_1 \) does not explain the variability in \( y \).
+
+### Problem 1c
+
+```{r p1c}
+# Linear regression of y on x2
+model_x2 <- lm(y ~ x2, data = dat)
+summary(model_x2)
+
+# Residual diagnostics
+par(mfrow = c(2, 2))
+plot(model_x2)
+
+```
+
+In this regression analysis for Problem 1c, we can set up the hypotheses as follows:
+
+- **Null Hypothesis (\( H_0 \))**: The coefficient of \( x_2 \) is zero (\( \beta_1 = 0 \)), meaning \( x_2 \) has no effect on \( y \).
+- **Alternative Hypothesis (\( H_a \))**: The coefficient of \( x_2 \) is not zero (\( \beta_1 \neq 0 \)), meaning \( x_2 \) has a significant effect on \( y \).
+
+The p-value for \( x_2 \) is 0.106, which is greater than the significance level of 0.05, indicating that we fail to reject the null hypothesis (\( H_0 \)). This suggests that there is insufficient evidence to conclude that \( x_2 \) has a significant effect on \( y \). The overall model's F-statistic has a p-value of 0.106, which also indicates that the model is not statistically significant. 
+
+
+### Problem 1d
+
+```{r p1d}
+# Linear regression of y on both x1 and x2
+model_x1_x2 <- lm(y ~ x1 + x2, data = dat)
+summary(model_x1_x2)
+
+# Residual diagnostics
+par(mfrow = c(2, 2))
+plot(model_x1_x2)
+
+```
+
+In this regression analysis for Problem 1d, we are testing the significance of both \( x_1 \) and \( x_2 \) in predicting \( y \). The hypotheses are as follows:
+
+- **Null Hypothesis (\( H_0 \))**: The coefficients of \( x_1 \) and \( x_2 \) are zero (\( \beta_1 = 0 \) and \( \beta_2 = 0 \)), meaning neither \( x_1 \) nor \( x_2 \) has an effect on \( y \).
+- **Alternative Hypothesis (\( H_a \))**: At least one of the coefficients (\( \beta_1 \) or \( \beta_2 \)) is not zero, indicating that at least one predictor has a significant effect on \( y \).
+
+The overall model is significant, with an F-statistic p-value of 0.01507, which is below the 0.05 threshold. This indicates that the model with both \( x_1 \) and \( x_2 \) provides a statistically significant fit for predicting \( y \). Looking at the individual predictors, \( x_1 \) has a p-value of 0.0174, and \( x_2 \) has a p-value of 0.0045, both of which are significant at the 0.05 level. This suggests that both \( x_1 \) and \( x_2 \) contribute meaningfully to the model. 
+
+
+### Problem 1e
+
+Using a significance level of 0.05, forward selection would fail to identify either x₁ or x₂ as significant predictors when considered individually, meaning neither variable would enter the model. This is problematic because we would miss the significant combined effect found when both variables are included together (model d). In contrast, backward selection, starting with the full model containing both variables, would retain both predictors since their joint effect is significant. This illustrates a key limitation of forward selection - it can miss important variable combinations by only considering one variable at a time - while demonstrating an advantage of backward selection in capturing joint effects that aren't apparent when variables are considered in isolation. 
+
+
+
+### Problem 4a
+
+```{r p4a}
+# Load required libraries
+library(dplyr)
+library(lubridate)
+
+# (a) Read and process customer data
+customer <- read.csv("/Users/homura/Desktop/customer2.csv")
+customer$logtarg <- log(customer$target + 1)
+
+# Print basic statistics for customer data
+cat("\nCustomer Data Summary:\n")
+summary(customer)
+```
+
+### Problem 4b
+
+```{r p4b}
+# Read orders data
+orders_data <- read.csv("/Users/homura/Desktop/orders.csv")
+
+# Remove duplicate rows based on 'id', 'orddate', and 'ordnum' (if these uniquely identify an order)
+orders_data <- orders_data %>%
+  distinct(id, orddate, ordnum, .keep_all = TRUE)
+
+# Create a new variable 't' for time (years) since the transaction as of 2014-11-25
+orders_data <- orders_data %>%
+  mutate(t = as.numeric(as.Date("2014-11-25", format="%Y-%m-%d") - as.Date(orddate, format="%d%b%Y")) / 365.25)
+
+# Print basic descriptive statistics
+summary(orders_data)
+
+```
+
+### Problem 4c
+
+```{r p4c}
+# Aggregate the transaction file to create the RFM table
+RFM_table <- orders_data %>%
+  group_by(id) %>%
+  summarise(
+    tof = max(t),                     # Time on file: years since the first order
+    r = min(t),                       # Recency: years since the most recent order
+    f = n_distinct(ordnum),           # Frequency: number of unique orders
+    m = sum(price * qty)              # Monetary: total amount spent
+  )
+
+# Print basic summary statistics for the RFM table
+summary(RFM_table)
+
+```
+
+
+### Problem 4d
+
+```{r p4d}
+# Join the customer and RFM tables
+merged_data <- customer %>%
+  inner_join(RFM_table, by = "id")
+
+# Regress 'logtarg' on 'log(tof)', 'log(r)', 'log(f)', and 'log(m + 1)' using only training data
+train_data <- merged_data %>% filter(train == 1)
+model <- lm(logtarg ~ log(tof) + log(r) + log(f) + log(m + 1), data = train_data)
+
+# Show a summary of the fitted model
+summary(model)
+
+```
+
+
+### Problem 4e
+
+```{r p4e}
+# (e) Compute MSE on test set
+# Apply the model from the training part to the test set
+test_data <- merged_data %>% filter(train == 0)
+
+# Predict 'logtarg' for the test set using the fitted model
+test_data$predicted_logtarg <- predict(model, newdata = test_data)
+
+# Compute the Mean Squared Error (MSE) on the test set
+mse <- mean((test_data$logtarg - test_data$predicted_logtarg)^2)
+print(paste("Mean Squared Error on the test set:", mse))
+
+```
+
+
+
+
