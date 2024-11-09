@@ -1,0 +1,146 @@
+---
+title: "Homework6"
+output: html_document
+date: "2024-11-09"
+---
+
+## Question 1
+```{r}
+library(MASS)
+dim(Boston)
+Boston$logcrim = log(Boston$crim) # create log transform of crim
+summary(Boston)
+set.seed(12345)
+train = runif(nrow(Boston))<.5 # pick train/test split
+```
+#### Part a
+```{r}
+table(train)
+prop.table(table(train))
+```
+#### Part B
+Residuals vs Fitted: There doesn't appear to be a strong non-linear pattern, which suggests that a linear model is appropriate.
+
+Q-Q Plot: Residuals seem to follow a normal distribution fairly closely, most points lie along the line. However, there are a few points at the extremes that deviate slightly.
+
+Scale-Location: The red line is fairly flat, which suggests that the variance of residuals is approximately constant, though there might be slight heteroscedasticity.
+
+Residuals vs Leverage: A few high-leverage points appear in the plot, but they don't seem to have an excessively large influence (Cook's distance), so it’s worth considering them.
+```{r}
+fit <- lm(logcrim ~ . - crim, data=Boston, subset=train)
+
+test_pred <- predict(fit, newdata=Boston[!train,])
+test_mse <- mean((Boston$logcrim[!train] - test_pred)^2)
+
+par(mfrow=c(2,2))
+plot(fit)
+```
+#### Part C
+```{r}
+backward_model <- step(fit, direction="backward")
+
+backward_pred <- predict(backward_model, newdata=Boston[!train,])
+backward_mse <- mean((Boston$logcrim[!train] - backward_pred)^2)
+print(backward_mse)
+```
+#### Part D
+```{r}
+library(glmnet)
+
+# Prepare data for glmnet (requires matrix form)
+x_train <- model.matrix(logcrim ~ . - crim, data=Boston[train,])
+y_train <- Boston$logcrim[train]
+x_test <- model.matrix(logcrim ~ . - crim, data=Boston[!train,])
+
+# Fit ridge regression with cross-validation
+ridge_cv <- cv.glmnet(x_train, y_train, alpha=0)
+
+# Get optimal lambda
+best_lambda_ridge <- ridge_cv$lambda.min
+
+# Predict on test set
+ridge_pred <- predict(ridge_cv, s=best_lambda_ridge, newx=x_test)
+ridge_mse <- mean((Boston$logcrim[!train] - ridge_pred)^2)
+print(ridge_mse)
+
+```
+#### Part E
+```{r}
+# Fit lasso regression with cross-validation
+lasso_cv <- cv.glmnet(x_train, y_train, alpha=1)
+
+# Get optimal lambda
+best_lambda_lasso <- lasso_cv$lambda.min
+
+# Predict on test set
+lasso_pred <- predict(lasso_cv, s=best_lambda_lasso, newx=x_test)
+lasso_mse <- mean((Boston$logcrim[!train] - lasso_pred)^2)
+print(lasso_mse)
+
+```
+#### Part F
+ Which transformations are important, by coming into the stepwise and/or lasso models?
+ 
+Overall, log transformations (log_tax, log_rad, log_reflected_age) and non-linear transformations (sqrt_lstat, nox³) emerge as impactful across stepwise and both Lasso, Stepwise models, revealing their importance in capturing non-linear relationships.
+
+log_tax: This transformation has substantial coefficients in both models:
+Stepwise: 8.1218
+Lasso: 5.1866
+log_rad: Another impactful transformation with strong coefficients in both models:
+Stepwise: -1.2037
+Lasso: -0.5105
+sqrt_lstat: Although this transformation was only selected by the stepwise model with a coefficient of -1.1964, it suggests that lstat benefits from a non-linear transformation to better capture its effect.
+```{r}
+Boston$log_tax <- log(Boston$tax)  # Right skewed
+Boston$log_rad <- log(Boston$rad + 1)
+Boston$sqrt_zn <- sqrt(Boston$zn + 1)    
+Boston$sqrt_lstat <- sqrt(Boston$lstat)  
+
+max_age <- max(Boston$age) # Change skew to do log transformation
+Boston$log_reflected_age <- log(max_age - Boston$age + 1)
+
+# Cubic transformations
+Boston$nox3 <- Boston$nox^3
+Boston$rm3 <- Boston$rm^3
+
+# Interaction
+Boston$sqrt_lstat_rm <- Boston$sqrt_lstat * Boston$rm
+
+```
+
+```{r}
+full_model_transformed <- lm(logcrim ~ . - crim, data=Boston, subset=train)
+backward_model_transformed <- step(full_model_transformed, direction="backward")
+backward_pred_transformed <- predict(backward_model_transformed, newdata=Boston[!train,])
+backward_mse_transformed <- mean((Boston$logcrim[!train] - backward_pred_transformed)^2)
+print(backward_mse_transformed)
+
+```
+
+```{r}
+x_train_transformed <- model.matrix(logcrim ~ . - crim, data=Boston[train,])
+x_test_transformed <- model.matrix(logcrim ~ . - crim, data=Boston[!train,])
+
+# Ridge
+ridge_cv_transformed <- cv.glmnet(x_train_transformed, y_train, alpha=0)
+ridge_pred_transformed <- predict(ridge_cv_transformed, s=ridge_cv_transformed$lambda.min, newx=x_test_transformed)
+ridge_mse_transformed <- mean((Boston$logcrim[!train] - ridge_pred_transformed)^2)
+print(ridge_mse_transformed)
+
+# Lasso
+lasso_cv_transformed <- cv.glmnet(x_train_transformed, y_train, alpha=1)
+lasso_pred_transformed <- predict(lasso_cv_transformed, s=lasso_cv_transformed$lambda.min, newx=x_test_transformed)
+lasso_mse_transformed <- mean((Boston$logcrim[!train] - lasso_pred_transformed)^2)
+print(lasso_mse_transformed)
+
+```
+```{r}
+print(coef(backward_model_transformed))
+print(coef(lasso_cv_transformed, s=lasso_cv_transformed$lambda.min))
+```
+
+```{r}
+
+
+```
+
