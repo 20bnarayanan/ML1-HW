@@ -1,0 +1,111 @@
+---
+title: "Final_Project"
+author: "Hongkai Lou"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r}
+library(dplyr)
+library(car)
+library(corrplot)
+np = read.table("np.csv", header=T, na.strings=".") %>%
+  arrange(SubscriptionId, t) %>%
+  group_by(SubscriptionId) %>%
+  mutate(nextchurn = lead(churn),
+  nextprice=lead(currprice),
+  t = t)
+table(np$nextchurn)
+table(np$trial)
+hist(np$currprice)
+
+
+```
+
+# 2a
+
+The trial has an positive effect in the model, meaning that it positively increase the churn possibility of a customer. Customers who are currently on a trial offer are more likely to churn. The reason might be that the trials are only offered to new customers (who registered the first time), and these users are not fully committed to the service and may view this trial as an opportunity to explore without an intention to continue. 
+
+# 2b
+
+We see that regularity has a more significant impact on churn possibility of customers. 
+
+$\bullet$ First, notice that both regularity and intensity has a negative coefficient, meaning that a higher engagement overall will reduce the churn rate. 
+
+$\bullet$ Secondly, from the first model, where regularity and intensity are both included, we see that regularity has a higher t-value, meaning it is more statistically significant when they are grouped together. Furthermore, by displaying the vif, we observe that there is barely a multicollinearity situation here. Thus, as they are not highly associated, regularity is a more effective in interpreting churn rate than intensity when putting together
+
+$\bullet$ Furthermore, by looking at the model separartely (lm2 and lm3), we see that regularity also has a smaller p-value. The residual deviance is also lower for the model including regularity. Thus, regularity is more effect, and the organization should encourage regularity. The reason why regularity is more important might due to the fact that higher intensity may cause readers to be 'burned out' in a short period of time, and may not be encouraged.
+
+$\bullet$ In terms of nextprice, we see that nextprice variable is highly statistically significant in all three models, with a positive coefficient, which means that a higher price in next month will lead to a higher churn rate. That is a highly expected result, as customers will be less motivated to spend more money on the product.
+
+$\bullet$ In the end, all three models have small vif values, all variables have vif values less than 1.5, meaning there is little multicollinearity situation in the current analysis.
+```{r}
+m = cor(np[,c('nextchurn','t', "trial", "nextprice", "regularity", "intensity")], use = 'complete.obs')
+corrplot(m, method = 'number')
+corrplot(m)
+lm1 <- glm(nextchurn ~ t+trial+nextprice+regularity+intensity, family = 'binomial', data = np)
+summary(lm1)
+vif(lm1)
+lm2 <- glm(nextchurn ~ t+trial+nextprice+regularity, family = 'binomial', data = np)
+summary(lm2)
+vif(lm2)
+lm3 <- glm(nextchurn ~ t+trial+nextprice+intensity, family = 'binomial',data = np)
+summary(lm3)
+vif(lm3)
+```
+
+## 3
+
+$\bullet$ Content variables (e.g., sports, news, crime, life, obits, business, opinion) have varying effects on churn rate, but most of them show limited statistical significance. While some content types slightly influence the churn rate, their effects are generally weaker compared to factors like trial and nextprice. 
+
+$\bullet$ Only sports and news content have significant impacts on churn, and both reduce the churn rate. This suggests that engaging customers with sports and news content could help retain them. The possible intention behind it is that News content is often highly relevant to users, keeping them informed about current events. Customers who find value in staying updated might engage more with the platform, leading to higher retention. Also, Sports fans often have strong loyalty to their favorite teams or leagues, driving them to consume sports content regularly.
+
+$\bullet$ Other content types (crime, life, obits, business, opinion) show no statistically significant impact on churn, implying that these content types do not strongly influence customer retention. There coefficient are less interested to study.
+
+$\bullet$ After including regularity, we see that as the signifcance of effect that regularity brought to reduce churn rate, all content becomes not statistically significant. The effect of sports drops significantly. A possible explaination is including regularity shifts the focus from specific content categories to overall user engagement patterns, making regularity a stronger and more comprehensive predictor of churn. As a result, the impact of content variables appears diminished in the model.
+
+$\bullet$ Examining vif can also give a possible explaination. After including regularity, all vif values of content rise. Especially news and lifes. From the correlation plot, we see that regularity has relatively high correlation with all content, especially sports1 and news1, which possibly explains that it reduce the apparent significance of content variables when including regularity.
+
+```{r}
+m = cor(np[,c('nextchurn','t', "trial", "nextprice", "regularity", "sports1", "news1", "crime1", "obits1", "business1", "opinion1")],  use = 'complete.obs')
+corrplot(m, method = 'number')
+corrplot(m)
+lm4 <- glm(nextchurn~t+trial+nextprice+sports1+news1+crime1+life1+obits1+business1+opinion1, family = 'binomial', data = np)
+summary(lm4)
+vif(lm4)
+lm5 <- glm(nextchurn~t+trial+nextprice+sports1+news1+crime1+life1+obits1+business1+opinion1+regularity, family = 'binomial',data = np)
+summary(lm5)
+vif(lm5)
+```
+
+# 4
+
+$\bullet$ The results show that device usage impacts churn, with **desktop** usage significantly reducing churn (coefficient = -0.0077, p < 0.001). This suggests that users who access the platform via desktop are more likely to stay engaged, while **mobile** (-0.0021, p = 0.322) and **tablet** (-0.0065, p = 0.102) usage have no statistically significant effect on churn.
+
+$\bullet$ Desktop users may engage more deeply with the platform, possibly using it for professional or extensive purposes, which contributes to retention. In contrast, mobile and tablet usage might reflect more casual engagement, explaining their weaker effects. These findings highlight the value of optimizing the desktop experience to improve retention while considering other factors like content and regularity.
+
+$\bullet$ Including **t (month)**, **nextprice**, and **trial** in the model provides additional explanatory power and highlights the significance of desktop usage in reducing churn. The coefficient for **desktop** (-0.0091, p < 0.001) remains negative and becomes more significant, indicating that users who access the platform via desktop are even less likely to churn. **Tablet usage** shows a borderline significant effect (p = 0.0534), while **mobile usage** remains non-significant. Additionally, **nextprice** (0.0831, p < 0.001) and **trial** (0.3071, p = 0.0472) positively correlate with churn, confirming their roles as strong drivers of user drop-off.
+
+$\bullet$ Including these three variables likely makes desktop usage more significant because these variables account for broader temporal patterns, pricing effects, and trial-based behaviors. This reduces unexplained variability in the model, allowing the specific impact of desktop usage to emerge more clearly. Desktop users may exhibit more consistent engagement and loyalty, which stands out when other major churn predictors are accounted for. This emphasizes that desktop access is an independent factor in reducing churn.
+
+$\bullet$ Observing the correlation plot the vif, we see that the correlation and vif values are really low. Specifically, the vif values of mobile, tablet, and desktop approach 0, whether or not t, mobile, and trial are included. After including these three variables, the vif values are still all less than 1.5 indicating small or ignorable multicollinearity.
+
+```{r}
+head(np)
+m = cor(np[,c('nextchurn','t', "trial", "nextprice", "mobile", "tablet", "desktop")],  use = 'complete.obs')
+corrplot(m, method = 'number')
+corrplot(m)
+lm6 <- glm(nextchurn ~ t+mobile+tablet+desktop, family = "binomial",data = np)
+summary(lm6)
+vif(lm6)
+
+lm7 <- glm(nextchurn ~ t+mobile+tablet+desktop+nextprice+trial,family = "binomial", data = np)
+summary(lm7)
+vif(lm7)
+```
+
+
+
+
+
+
