@@ -1,0 +1,342 @@
+
+
+
+
+```{r}
+library(dplyr)
+library(magrittr)
+library(tidyverse)
+
+# install.packages("dplyr")
+
+```
+
+
+
+```{r}
+
+# C:/Users/shubh/programming_work/git_repos/NU/courses_and_academics/ML_1/ml1_project
+
+data = read.table("C:/Users/shubh/programming_work/git_repos/NU/courses_and_academics/ML_1/ml1_project/np.csv", header=T, na.strings=".") %>%
+                arrange(SubscriptionId, t) %>%
+                group_by(SubscriptionId) %>%
+                mutate(nextchurn = lead(churn),
+                nextprice=lead(currprice),
+                t = t)
+
+View(data)
+
+```
+
+
+
+
+
+
+```{r}
+library(car)
+# Model 1
+model1 <- glm(nextchurn ~ t + trial + nextprice + regularity + intensity, 
+              data = data, family = binomial)
+
+# Model 2
+model2 <- glm(nextchurn ~ t + trial + nextprice + regularity, 
+              data = data, family = binomial)
+
+# Model 3
+model3 <- glm(nextchurn ~ t + trial + nextprice + intensity, 
+              data = data, family = binomial)
+
+# View summaries of the models
+summary(model1)
+summary(model2)
+summary(model3)
+# Correlation matrix
+cor_matrix <- cor(data[c("t", "trial", "nextprice", "regularity", "intensity")])
+print(cor_matrix)
+
+# VIFs
+library(car)
+cat('\n\n')
+vif(model1)
+cat('\n\n')
+vif(model2)
+cat('\n\n')
+vif(model3)
+cat('\n\n')
+```
+
+
+
+```{}
+
+trial - t > -0.4424921
+regularity - intensity > 0.4902455
+
+
+VIF
+           t       trial     nextprice  regularity  intensity 
+    1.495581   1.449884   1.035239   1.463987    1.432546 
+    
+    
+           t      trial   nextprice  regularity 
+    1.484643   1.438270   1.035160   1.101866 
+    
+    
+          t     trial   nextprice  intensity 
+    1.485314  1.445492   1.022144   1.095508 
+
+
+```
+
+
+```{}
+
+Null deviance: 3212.9  on 9534  degrees of freedom
+Residual deviance: 3131.5  on 9529  degrees of freedom
+  (2635 observations deleted due to missingness)
+AIC: 3143.5
+
+Number of Fisher Scoring iterations: 6
+
+
+
+
+
+
+(Dispersion parameter for binomial family taken to be 1)
+
+    Null deviance: 3212.9  on 9534  degrees of freedom
+Residual deviance: 3134.0  on 9530  degrees of freedom
+  (2635 observations deleted due to missingness)
+AIC: 3144
+
+Number of Fisher Scoring iterations: 6
+
+
+
+
+
+(Dispersion parameter for binomial family taken to be 1)
+
+    Null deviance: 3212.9  on 9534  degrees of freedom
+Residual deviance: 3146.0  on 9530  degrees of freedom
+  (2635 observations deleted due to missingness)
+AIC: 3156
+
+Number of Fisher Scoring iterations: 6
+```
+
+
+
+```{}
+What do you conclude about the effects of trial, price, regularity and intensity?
+
+  there's moderate collinearity between t and trial
+  and
+  regularity and intensity
+  
+  coeffs for trial are fairly consistent throughout
+  coeffs for price are consistent except when regularity is excluded. then it decreases.
+  coeffs for regularity are consistent and stronger compared to intensity
+  coeffs for intensity are not as consistent and significant
+
+trial, price and regularity are important predictors to consider  
+
+```
+
+
+
+
+
+
+
+
+
+
+```{r}
+
+
+model <- glm(nextchurn ~ t + trial + nextprice + sports1 + news1 + crime1 + 
+             life1 + obits1 + business1 + opinion1, 
+             data = data, 
+             family = binomial(link = "logit"))
+
+# View the summary of the model
+summary(model)
+
+
+
+```
+
+
+
+```{r}
+
+model_with_sections_and_regularity <- glm(nextchurn ~ t + trial + nextprice + sports1 + news1 + crime1 + 
+             life1 + obits1 + business1 + opinion1 + regularity, 
+             data = data, 
+             family = binomial(link = "logit"))
+
+# View the summary of the model
+summary(model_with_sections_and_regularity)
+
+
+
+
+```
+
+```{}
+
+includng regularity caused all the sections' coeffs to 
+increase for sections that encourage churn (+ve coeffs)
+and decrease for sections that discourage the same (-ve coeffs)
+
+this indicates regularity is able to capture most of the variation on behalf of sections that encourage retention.
+but its inclusion causes the effect of churn motivators to increase.
+
+without regularity, 
+impact of churn-motivating content is underestimated
+and
+impact of churn-avoiding content is overestimated
+
+
+```
+
+
+
+
+
+```{}
+including only devices
+
+
+```
+
+
+
+```{r}
+# Assuming your data is in a dataframe called 'df'
+model_with_sections_and_regularity <- glm(nextchurn ~ mobile + tablet + desktop, 
+             data = data, 
+             family = binomial(link = "logit"))
+
+# View the summary of the model
+summary(model_with_sections_and_regularity)
+
+
+```
+
+
+```{}
+
+Including all predictors but performing lasso with cross validation
+
+```
+
+
+
+
+
+
+```{}
+
+
+```
+
+
+
+
+
+
+```{r}
+# Load required libraries
+library(glmnet)
+library(caret)
+
+# Assuming your data is in a dataframe called 'df'
+# 'nextchurn' is your dependent variable
+# All other columns are predictors
+
+# Prepare the data
+select_columns <- function(df, columns_to_include) {
+  X <- as.matrix(df[, columns_to_include])
+  return(X)
+}
+
+# Example usage:
+columns_to_include <- c("t", "trial", "nextprice", "sports1", "news1", "crime1", 
+                        "life1", "obits1", "business1", "opinion1", "regularity", "mobile", "tablet", "desktop")
+
+X <- select_columns(data, columns_to_include)
+y <- data$nextchurn
+
+# Set up cross-validation
+set.seed(123)  # for reproducibility
+cv_folds <- createFolds(y, k = 3, list = TRUE, returnTrain = FALSE)
+
+# Perform cross-validated Lasso logistic regression
+cv_lasso <- cv.glmnet(X, y, 
+                      family = "binomial", 
+                      alpha = 1,  # 1 for Lasso
+                      type.measure = "deviance",
+                      nfolds = 3,
+                      foldid = unlist(cv_folds))
+
+# View the results
+plot(cv_lasso)
+print(cv_lasso)
+
+# Get the best lambda value
+best_lambda <- cv_lasso$lambda.min
+cat("Best lambda:", best_lambda, "\n")
+
+# Fit the final model using the best lambda
+final_model <- glmnet(X, y, 
+                      family = "binomial", 
+                      alpha = 1, 
+                      lambda = best_lambda)
+
+# View the coefficients of the final model
+coef(final_model)
+
+# Make predictions (if needed)
+predictions <- predict(final_model, newx = X, type = "response")
+```
+
+
+
+
+```{}
+Lasso - which can act like a feature selector
+has dropped (by shrinking the coeffs)
+
+of
+all the sections
+and all devices except desktop.
+
+the pipe/collider/fork relationship involves regularity and the content-sections. 
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
