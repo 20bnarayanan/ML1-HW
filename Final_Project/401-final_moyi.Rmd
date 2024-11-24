@@ -106,3 +106,60 @@ corrplot(cor_matrix, method = "color", addCoef.col = "black",
 a) Looking at all three models, the trial variable shows a consistent positive and statistically significant effect on next month's churn. The coefficient for trial ranges from 0.325 to 0.360 across the models (all with p < 0.05). Given that most trial offers are 1 month and many customers didn't have trial offers, this positive association suggests that customers who come in through trial subscriptions are more likely to churn in their next period. This makes intuitive sense as trial subscribers may be initially attracted by the discounted rate and are more likely to cancel when faced with full-price subscriptions. This behavior pattern indicates that while trials may be effective at acquiring new customers, they might be attracting more price-sensitive subscribers who are less likely to convert to long-term customers.
 
 b) The comparison between intensity and regularity provides interesting insights into user engagement patterns. In Model 1, which includes both variables, regularity shows a significant negative effect on churn (coefficient = -0.0265, p < 0.001), while intensity is not significant (coefficient = -0.00771, p = 0.135). When each variable is tested separately in Models 2 and 3, both become highly significant, with regularity showing a stronger effect (coefficient = -0.0319, p < 2.08e-07) compared to intensity (coefficient = -0.0189, p = 0.000163). The VIF values for both variables are relatively low (around 1.1-1.4), indicating minimal multicollinearity concerns. This suggests that regularity - the number of reading days per month - is a more reliable predictor of customer retention than intensity (page views per reading day). Organizations should therefore prioritize developing strategies that encourage consistent, regular engagement with the content rather than focusing on increasing the volume of content consumed during each visit (Model2). Regular usage habits appear to be more effective at building lasting customer relationships than intensive but potentially sporadic usage patterns.
+
+## Problem 3
+
+```{r p3}
+# Load necessary libraries
+library(dplyr)
+
+# Load the dataset
+np <- read.table("np.csv", header = TRUE, na.strings = ".", sep = " ")
+
+# Group by SubscriptionId and create lead variables
+np <- np %>%
+  arrange(SubscriptionId, t) %>%
+  group_by(SubscriptionId) %>%
+  mutate(
+    nextchurn = lead(churn),
+    nextprice = lead(currprice)
+  )
+
+# Fit the logistic regression model for content
+model_content <- glm(
+  nextchurn ~ t + trial + nextprice + sports1 + news1 + crime1 + life1 + obits1 + business1 + opinion1,
+  data = np,
+  family = binomial()
+)
+
+# Add regularity to the model
+model_content_with_regularity <- glm(
+  nextchurn ~ t + trial + nextprice + sports1 + news1 + crime1 + life1 + obits1 + business1 + opinion1 + regularity,
+  data = np,
+  family = binomial()
+)
+
+# Summarize the models
+summary(model_content)
+summary(model_content_with_regularity)
+
+```
+
+The analysis of content variables reveals that sports and news content significantly reduce churn, suggesting these categories engage users effectively and are crucial for retention strategies. However, when regularity is included in the model, these effects diminish, and regularity becomes a strong predictor of churn reduction, indicating its overarching influence on user behavior. Other content variables, such as crime, life, obits, business, and opinion, show no statistically significant impact on churn in either model. This suggests that overall user engagement, as measured by regularity, is more critical for retention than specific content categories, emphasizing the need to focus on fostering consistent user interactions.
+
+## Problem 4
+
+```{r p4}
+# Fit the logistic regression model for devices
+model_device <- glm(
+  nextchurn ~ t + trial + nextprice + mobile + tablet + desktop,
+  data = np,
+  family = binomial()
+)
+
+# Summarize the model
+summary(model_device)
+
+```
+
+The analysis reveals that desktop usage significantly reduces churn, with higher desktop sessions associated with improved retention, suggesting it is the most impactful device for engaging users. In contrast, mobile usage has no significant effect, and tablet usage shows a weak negative impact on churn, indicating their lesser importance. These findings highlight the need to prioritize enhancing desktop user experiences to improve retention. Additionally, other factors like trial periods and next-period pricing also influence churn, with trial users being more likely to churn and higher prices increasing churn risk. Strategies should focus on converting trial users into long-term subscribers, optimizing pricing models, and leveraging the engagement potential of desktop platforms.
