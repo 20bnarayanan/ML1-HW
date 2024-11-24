@@ -1,0 +1,250 @@
+---
+title: "Final_project"
+author: "BNarayanan"
+date: "2024-11-24"
+output: html_document
+---
+```{r}
+library(dplyr)
+file_path <- "np (1).csv"
+np <- read.table(file_path, header = TRUE, sep = " ", na.strings = ".")
+head(data)
+```
+```{r}
+data <- data %>% select(-starts_with("Loc"), -starts_with("Src"))
+str(data)
+```
+```{r}
+colSums(is.na(data))
+# For example, replace missing values with column means (numeric columns)
+data <- data %>% mutate(across(where(is.numeric), ~ ifelse(is.na(.), mean(., na.rm = TRUE), .)))
+
+```
+```{r}
+table(data$churn)
+
+summary(select(data, regularity, intensity, currprice, trial))
+
+```
+```{r}
+np <- np %>%
+  arrange(SubscriptionId, t) %>% # Sort by customer ID and month
+  group_by(SubscriptionId) %>%  # Group by each customer
+  mutate(
+    nextchurn = lead(churn),         # Churn status for next month
+    nextprice = lead(currprice),     # Price paid for next month
+    t = t                            # Retain the current time column
+  )
+head(np)
+```
+```{r}
+# Model 1: nextchurn ~ t + trial + nextprice + regularity + intensity
+model1 <- glm(nextchurn ~ t + trial + nextprice + regularity + intensity, 
+              data = np, 
+              family = binomial)
+
+# Model 2: nextchurn ~ t + trial + nextprice + regularity
+model2 <- glm(nextchurn ~ t + trial + nextprice + regularity, 
+              data = np, 
+              family = binomial)
+
+# Model 3: nextchurn ~ t + trial + nextprice + intensity
+model3 <- glm(nextchurn ~ t + trial + nextprice + intensity, 
+              data = np, 
+              family = binomial)
+
+```
+
+```{r}
+# Summary for Model 1
+summary(model1)
+
+# Summary for Model 2
+summary(model2)
+
+# Summary for Model 3
+summary(model3)
+```
+
+```{r}
+cat("Model 1 AIC:", AIC(model1), "\n")
+cat("Model 2 AIC:", AIC(model2), "\n")
+cat("Model 3 AIC:", AIC(model3), "\n")
+```
+
+```{r}
+
+library(car)
+vif(model1)
+vif(model2)
+vif(model3)
+```
+### 2
+##### Trial Effects
+In all three models, trial has a positive coefficient and is statistically significant (p < 0.05). This suggests that customers on trial offers are more likely to churn.
+This makes sense given the nature of trial offers, where customers may not transition into paying subscriptions after the trial period.
+##### Price
+In all models, nextprice has a positive coefficient and is statistically significant. This means that higher subscription prices are associated with an increased likelihood of churn.
+Price sensitivity is a common driver of churn, suggesting that affordability or perceived value might be areas for improvement.
+##### Regularity
+Regularity has a negative coefficient and is highly significant in both Models 1 and 2. This indicates that more frequent engagement (measured by reading days per month) reduces the likelihood of churn.
+The strong significance of regularity highlights the importance of creating habits and encouraging customers to engage with content consistently.
+
+##### Intensity
+Intensity has a negative coefficient and is statistically significant in Models 1 and 3. This suggests that deeper engagement (measured by page views per reading day) is also associated with lower churn.
+
+However, the p-value in Model 1 (when both regularity and intensity are included) indicates that intensity is not as strong of a predictor compared to regularity.
+
+##### VIFs
+Diagnostics (VIFs):
+The Variance Inflation Factors (VIFs) for all models are low (close to 1), indicating no significant multicollinearity among the predictors.
+
+#### Part a
+Short Trial Period:
+Since most trial offers are for 1 month, the trial variable likely captures the behavior of customers during or immediately after their trial period.
+A positive coefficient means customers on trials are more likely to churn, which could indicate that the trial experience is not compelling enough to retain them or that the transition to a paid subscription is a barrier (e.g., due to pricing or lack of perceived value).
+
+Customers Without Trials:
+Customers who are not on trial offers are less likely to churn, possibly because they’ve already committed to a paid subscription and see value in the product.
+This highlights the need to improve the transition from trial to paid subscriptions, perhaps through personalized onboarding, discounted first payments, or additional benefits for trial users.
+
+#### Part b
+Regularity is more significant and has a larger effect (more negative coefficient) than intensity:
+In Model 1, regularity is highly significant (p = 0.000176), while intensity is not significant (p = 0.135285).
+In Models 2 and 3 (when analyzed independently), both are significant, but regularity has a larger effect size.
+
+Focus on Regularity:
+The organization should prioritize strategies that encourage customers to engage frequently. Examples include:
+Daily content updates to give users a reason to return every day.
+Push notifications or reminders to encourage regular visits.
+Gamification features like streaks or rewards for consecutive days of use.
+
+### 3
+```{r}
+model4 <- glm(nextchurn ~ t + trial + nextprice + sports1 + news1 + crime1 + 
+                life1 + obits1 + business1 + opinion1, 
+              data = np, 
+              family = binomial)
+summary(model4)
+vif(model4)
+cat("Model 4 AIC:", AIC(model4), "\n")
+```
+```{r}
+model5 <- glm(nextchurn ~ t + trial + nextprice + sports1 + news1 + crime1 + 
+                life1 + obits1 + business1 + opinion1 + regularity, 
+              data = np, 
+              family = binomial)
+
+summary(model5)
+cat("Model 5 AIC:", AIC(model5), "\n")
+vif(model5)
+```
+The coefficient of regularity is -0.0288 and highly significant (p = 0.00137). This reinforces the finding that more frequent engagement reduces churn.
+This result aligns with earlier models, showing that regularity plays a critical role in retaining customers.
+
+Several content variables (e.g., sports1, news1, crime1) lose statistical significance after adding regularity:
+sports1 becomes non-significant (p = 0.80243).
+news1 is marginally non-significant (p = 0.12865).
+Other content variables like crime1, life1, and obits1 remain non-significant.
+This suggests that the effects of content engagement are largely explained by the customer's regularity (number of reading days).
+trial, nextprice, and t remain significant with little change in their coefficients:
+trial (p = 0.02935): Trial users are more likely to churn.
+nextprice (p = 2.11e-06): Higher prices increase churn.
+t (p = 1.02e-06): Longer subscription tenure reduces churn.
+
+Including regularity in the model strengthens the conclusion that regular engagement is the most critical factor in reducing churn. 
+
+### 4
+```{r}
+model6 <- glm(nextchurn ~ t + trial + nextprice + regularity + mobile + tablet + desktop, 
+              data = np, 
+              family = binomial)
+
+# View the summary
+summary(model6)
+cat("Model 6 AIC:", AIC(model6), "\n")
+vif(model6)
+```
+Mobile Usage:
+
+Coefficient: 0.0017 (positive, very small magnitude).
+Significance: p = 0.537 (not statistically significant).
+Interpretation:
+Mobile usage does not have a meaningful impact on churn in this model.
+This suggests that the frequency of mobile sessions alone is not a strong determinant of whether a customer stays or churns.
+
+Tablet Usage:
+
+Coefficient: -0.0010 (negative, very small magnitude).
+Significance: p = 0.821 (not statistically significant).
+Interpretation:
+Tablet usage has no significant impact on churn.
+This could be due to tablet usage being more situational or infrequent, contributing less to overall engagement.
+
+Desktop Usage:
+
+Coefficient: -0.0026 (negative, very small magnitude).
+Significance: p = 0.400 (not statistically significant).
+Interpretation:
+Desktop usage also shows no significant relationship with churn.
+This could indicate that desktop sessions are not representative of engagement or retention behaviors.
+
+Device Choice is Not a Key Driver of Churn:
+Customers are equally likely to churn regardless of the devices they use to engage with the product.
+
+Regularity remains significant and negatively associated with churn, reinforcing the idea that fostering consistent engagement (across any device) is more critical than focusing on specific platforms.
+
+###5
+```{r}
+model7 <- glm(nextchurn ~ t + trial + nextprice + regularity +
+                sports1 + news1 + crime1 + life1 + obits1 + business1 + opinion1 +
+                mobile + tablet + desktop, 
+              data = np, 
+              family = binomial)
+
+# View the summary
+summary(model7)
+
+# Calculate AIC
+cat("Model 7 AIC:", AIC(model7), "\n")
+vif(model7)
+```
+The inclusion of payment, content, and device variables does not substantially alter the conclusions:
+Payment variables (trial, nextprice) and regularity remain key drivers of churn.
+Content and device variables add little explanatory power, suggesting limited direct effects on churn
+##### Lasso + Cross-Valid
+```{r}
+library(glmnet)
+complete_data <- np[complete.cases(np[, c("nextchurn", "t", "trial", "nextprice", "regularity",
+                                          "sports1", "news1", "crime1", "life1", "obits1",
+                                          "business1", "opinion1", "mobile", "tablet", "desktop")]), ]
+X <- model.matrix(nextchurn ~ t + trial + nextprice + regularity +
+                    sports1 + news1 + crime1 + life1 + obits1 + business1 + opinion1 +
+                    mobile + tablet + desktop, data = complete_data)[, -1]  # Exclude intercept
+
+# Create response variable
+y <- complete_data$nextchurn
+
+# Perform cross-validated LASSO
+cv_lasso <- cv.glmnet(X, y, family = "binomial", alpha = 1, nfolds = 10)
+
+# Best lambda (penalty parameter)
+best_lambda <- cv_lasso$lambda.min
+cat("Best lambda:", best_lambda, "\n")
+
+# Fit the final LASSO model using the best lambda
+lasso_model <- glmnet(X, y, family = "binomial", alpha = 1, lambda = best_lambda)
+
+# View coefficients
+coef(lasso_model)
+```
+t: Negative coefficient (-0.1129) indicates that longer subscription tenure reduces churn.
+trial: Positive coefficient (0.2861) shows that trial users are more likely to churn.
+nextprice: Positive coefficient (0.0656) indicates that higher prices increase churn likelihood.
+regularity: Negative coefficient (-0.0210) demonstrates that more frequent engagement reduces churn.
+desktop: Slight negative coefficient (-0.0016), suggesting that higher desktop usage may slightly reduce churn.
+
+All content variables (sports1, news1, crime1, etc.) were excluded.
+Device variables like mobile and tablet were also excluded.
+
+Only desktop is retained, with a negligible effect. This reinforces the conclusion that device type is not a key driver of churn.
